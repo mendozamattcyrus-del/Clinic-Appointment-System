@@ -1,0 +1,1729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MediCare — Clinic Appointment System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/inter@5.0.0/index.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<style>
+  :root {
+    --primary: #0ea5e9;
+    --primary-dark: #0284c7;
+    --accent: #14b8a6;
+    --bg: #f1f5f9;
+  }
+  * { font-family: 'Inter', sans-serif; }
+  body { background: #f1f5f9; }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .fade-in { animation: fadeIn 0.3s ease-in-out; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-in { animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1); }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(20px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .pulse-dot { animation: pulseDot 2s infinite; }
+  @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .slot-btn.active { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+  .slot-btn:disabled { opacity: 0.35; cursor: not-allowed; text-decoration: line-through; }
+  .day-btn.active { background: #0ea5e9; color: white; border-color: #0ea5e9; }
+  .day-btn.today { border-color: #0ea5e9; color: #0ea5e9; }
+  .day-btn.today.active { background: #0ea5e9; color: white; }
+  .nav-item.active { background: linear-gradient(90deg, rgba(14,165,233,0.12), transparent); color: #0ea5e9; border-left-color: #0ea5e9; }
+  .status-confirmed { background: #dcfce7; color: #15803d; }
+  .status-pending { background: #fef3c7; color: #b45309; }
+  .status-completed { background: #dbeafe; color: #1e40af; }
+  .status-cancelled { background: #fee2e2; color: #b91c1c; }
+  .gradient-card { background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); }
+  .gradient-card-2 { background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%); }
+  .gradient-card-3 { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+  .gradient-card-4 { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+  .doctor-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+  .doctor-card { transition: all 0.25s ease; }
+  .appt-row:hover { background: #f8fafc; }
+  .star-rating .star { cursor: pointer; transition: all 0.15s; }
+  .star-rating .star:hover, .star-rating .star.active { color: #f59e0b; transform: scale(1.15); }
+  .auth-bg {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #14b8a6 100%);
+  }
+  .auth-card { animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+  .feedback-card:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0,0,0,0.08); }
+  .feedback-card { transition: all 0.25s ease; }
+  .address-row { display: flex; align-items: flex-start; gap: 0.5rem; }
+  .address-row i { margin-top: 2px; flex-shrink: 0; }
+</style>
+</head>
+<body class="text-slate-800">
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="authScreen" class="fixed inset-0 z-[100] auth-bg flex items-center justify-center p-4">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+  </div>
+
+  <div class="relative w-full max-w-md">
+    <div class="text-center mb-6 text-white">
+      <div class="inline-flex w-16 h-16 rounded-2xl bg-white/20 backdrop-blur items-center justify-center text-white shadow-lg mb-3">
+        <i class="fa-solid fa-heart-pulse text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold">MediCare</h1>
+      <p class="text-sm text-white/80 mt-1">Your trusted clinic appointment system</p>
+    </div>
+
+    <div class="auth-card bg-white rounded-2xl shadow-2xl overflow-hidden">
+      <!-- Tabs -->
+      <div class="flex border-b border-slate-200">
+        <button id="tabSignIn" class="auth-tab flex-1 py-4 text-sm font-semibold text-sky-600 border-b-2 border-sky-500 bg-sky-50/50">Sign In</button>
+        <button id="tabSignUp" class="auth-tab flex-1 py-4 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700">Sign Up</button>
+      </div>
+
+      <!-- Sign In Form -->
+      <form id="signInForm" class="p-6 space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          <div class="relative">
+            <i class="fa-regular fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input id="signInEmail" type="email" placeholder="juan.delacruz@mail.com" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input id="signInPassword" type="password" placeholder="••••••••" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 text-slate-600">
+            <input type="checkbox" class="rounded border-slate-300 text-sky-500 focus:ring-sky-400"/>
+            Remember me
+          </label>
+          <a href="#" class="text-sky-600 hover:text-sky-700 font-medium">Forgot password?</a>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Login as</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-sky-300 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+              <input type="radio" name="signInRole" value="patient" checked class="text-sky-500 focus:ring-sky-400"/>
+              <span class="text-sm font-medium text-slate-700"><i class="fa-solid fa-user mr-1 text-sky-500"></i>Patient</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-sky-300 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+              <input type="radio" name="signInRole" value="staff" class="text-sky-500 focus:ring-sky-400"/>
+              <span class="text-sm font-medium text-slate-700"><i class="fa-solid fa-user-doctor mr-1 text-emerald-500"></i>Staff</span>
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold shadow-sm shadow-sky-200 transition">
+          <i class="fa-solid fa-right-to-bracket mr-1"></i> Sign In
+        </button>
+        <p id="signInError" class="text-xs text-red-500 text-center hidden"></p>
+        <p class="text-center text-xs text-slate-500">Demo: any email/password works</p>
+      </form>
+
+      <!-- Sign Up Form -->
+      <form id="signUpForm" class="p-6 space-y-4 hidden">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">First Name</label>
+            <input id="signUpFirst" type="text" placeholder="Juan" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Last Name</label>
+            <input id="signUpLast" type="text" placeholder="Dela Cruz" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+          <div class="relative">
+            <i class="fa-regular fa-envelope absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input id="signUpEmail" type="email" placeholder="you@example.com" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+          <div class="relative">
+            <i class="fa-solid fa-phone absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input id="signUpPhone" type="tel" placeholder="+63 917 123 4567" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
+          <div class="relative">
+            <i class="fa-solid fa-location-dot absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <textarea id="signUpAddress" rows="2" placeholder="House/Unit No., Street, Barangay, City/Municipality, Province" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm resize-none"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+          <div class="relative">
+            <i class="fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input id="signUpPassword" type="password" placeholder="Create a password" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 text-sm"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Account Type</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-sky-300 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+              <input type="radio" name="signUpRole" value="patient" checked class="text-sky-500 focus:ring-sky-400"/>
+              <span class="text-sm font-medium text-slate-700"><i class="fa-solid fa-user mr-1 text-sky-500"></i>Patient</span>
+            </label>
+            <label class="flex items-center gap-2 p-3 border border-slate-200 rounded-lg cursor-pointer hover:border-sky-300 has-[:checked]:border-sky-500 has-[:checked]:bg-sky-50">
+              <input type="radio" name="signUpRole" value="staff" class="text-sky-500 focus:ring-sky-400"/>
+              <span class="text-sm font-medium text-slate-700"><i class="fa-solid fa-user-doctor mr-1 text-emerald-500"></i>Staff</span>
+            </label>
+          </div>
+        </div>
+        <label class="flex items-start gap-2 text-xs text-slate-600">
+          <input type="checkbox" id="agreeTerms" class="mt-0.5 rounded border-slate-300 text-sky-500 focus:ring-sky-400"/>
+          <span>I agree to the <a href="#" class="text-sky-600 font-medium">Terms of Service</a> and <a href="#" class="text-sky-600 font-medium">Privacy Policy</a></span>
+        </label>
+        <button type="submit" class="w-full py-2.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold shadow-sm shadow-sky-200 transition">
+          <i class="fa-solid fa-user-plus mr-1"></i> Create Account
+        </button>
+        <p id="signUpError" class="text-xs text-red-500 text-center hidden"></p>
+      </form>
+    </div>
+
+    <p class="text-center text-xs text-white/70 mt-5">© 2026 MediCare Clinic. All rights reserved.</p>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="mainApp" class="flex h-screen overflow-hidden hidden">
+  <!-- Sidebar -->
+  <aside class="w-64 bg-white border-r border-slate-200 flex flex-col shadow-sm">
+    <div class="p-6 border-b border-slate-100">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl gradient-card flex items-center justify-center text-white shadow-lg shadow-sky-200">
+          <i class="fa-solid fa-heart-pulse text-lg"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-slate-800">MediCare</h1>
+          <p class="text-xs text-slate-500">Appointment System</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Role Switcher -->
+    <div class="p-4">
+      <div class="bg-slate-100 rounded-xl p-1 flex">
+        <button id="rolePatient" class="role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-sky-600">
+          <i class="fa-solid fa-user mr-1"></i> Patient
+        </button>
+        <button id="roleStaff" class="role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500">
+          <i class="fa-solid fa-user-doctor mr-1"></i> Staff
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 px-3 overflow-y-auto scrollbar-thin">
+      <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mt-2 mb-2" id="navLabel">Patient Menu</p>
+      <ul id="navMenu" class="space-y-1"></ul>
+    </nav>
+
+    <!-- User Info -->
+    <div class="p-4 border-t border-slate-100">
+      <div class="flex items-center gap-3">
+        <div id="userAvatar" class="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center text-white font-semibold">JD</div>
+        <div class="flex-1 min-w-0">
+          <p id="userName" class="text-sm font-semibold text-slate-800 truncate">Juan Dela Cruz</p>
+          <p id="userRole" class="text-xs text-slate-500 truncate">Patient</p>
+        </div>
+        <button id="signOutBtn" title="Sign Out" class="text-slate-400 hover:text-red-500 transition"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="flex-1 overflow-y-auto scrollbar-thin">
+    <!-- Top Bar -->
+    <header class="bg-white border-b border-slate-200 px-8 py-4 sticky top-0 z-20">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 id="pageTitle" class="text-2xl font-bold text-slate-800">Dashboard</h2>
+          <p id="pageSubtitle" class="text-sm text-slate-500">Welcome back, here's your overview</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <div class="relative">
+            <input id="globalSearch" type="text" placeholder="Search appointments..." class="pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm w-64 focus:outline-none focus:border-sky-400 focus:bg-white transition"/>
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+          </div>
+          <button class="relative w-10 h-10 rounded-lg bg-slate-50 hover:bg-slate-100 flex items-center justify-center transition">
+            <i class="fa-regular fa-bell text-slate-600"></i>
+            <span class="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full pulse-dot"></span>
+          </button>
+          <button id="newApptBtn" class="bg-sky-500 hover:bg-sky-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm shadow-sky-200 transition flex items-center gap-2">
+            <i class="fa-solid fa-plus"></i> New Appointment
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Container -->
+    <div id="pageContainer" class="p-8 fade-in"></div>
+  </main>
+</div>
+
+<!-- Booking Modal -->
+<div id="bookingModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 backdrop-blur-sm">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto scrollbar-thin slide-in">
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+      <div>
+        <h3 class="text-xl font-bold text-slate-800">Book New Appointment</h3>
+        <p class="text-sm text-slate-500">Fill in the details to schedule your visit</p>
+      </div>
+      <button id="closeModal" class="w-9 h-9 rounded-lg hover:bg-slate-100 flex items-center justify-center text-slate-500">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- Steps -->
+    <div class="px-6 pt-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-2 flex-1">
+          <div id="step1Indicator" class="w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center text-sm font-semibold">1</div>
+          <span class="text-sm font-medium text-sky-600">Doctor</span>
+        </div>
+        <div class="flex-1 h-0.5 bg-slate-200 mx-2"><div id="prog1" class="h-full bg-sky-500 transition-all" style="width:0%"></div></div>
+        <div class="flex items-center gap-2 flex-1">
+          <div id="step2Indicator" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-semibold">2</div>
+          <span class="text-sm font-medium text-slate-500">Date & Time</span>
+        </div>
+        <div class="flex-1 h-0.5 bg-slate-200 mx-2"><div id="prog2" class="h-full bg-sky-500 transition-all" style="width:0%"></div></div>
+        <div class="flex items-center gap-2 flex-1">
+          <div id="step3Indicator" class="w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-semibold">3</div>
+          <span class="text-sm font-medium text-slate-500">Details</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 1: Select Doctor -->
+    <div id="step1" class="px-6 pb-6">
+      <p class="text-sm font-medium text-slate-700 mb-3">Choose a doctor</p>
+      <div id="doctorGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- Step 2: Date & Time -->
+    <div id="step2" class="px-6 pb-6 hidden">
+      <p class="text-sm font-medium text-slate-700 mb-3">Select a date</p>
+      <div class="bg-slate-50 rounded-xl p-4 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <button id="prevMonth" class="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-600"><i class="fa-solid fa-chevron-left"></i></button>
+          <h4 id="monthLabel" class="font-semibold text-slate-800"></h4>
+          <button id="nextMonth" class="w-8 h-8 rounded-lg hover:bg-white flex items-center justify-center text-slate-600"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500 mb-2">
+          <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-7 gap-1"></div>
+      </div>
+      <div id="timeSlotsWrap" class="hidden">
+        <p class="text-sm font-medium text-slate-700 mb-3">Available time slots</p>
+        <div id="timeSlots" class="grid grid-cols-4 gap-2"></div>
+      </div>
+    </div>
+
+    <!-- Step 3: Details -->
+    <div id="step3" class="px-6 pb-6 hidden">
+      <div class="space-y-4">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Patient Name</label>
+          <input id="patientName" type="text" placeholder="Full name" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400"/>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+            <input id="patientPhone" type="tel" placeholder="+63 917 000 0000" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400"/>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Email</label>
+            <input id="patientEmail" type="email" placeholder="you@example.com" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400"/>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Address</label>
+          <div class="relative">
+            <i class="fa-solid fa-location-dot absolute left-3 top-3 text-slate-400 text-sm"></i>
+            <textarea id="patientAddress" rows="2" placeholder="House/Unit No., Street, Barangay, City/Municipality, Province" class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 resize-none"></textarea>
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Reason for Visit</label>
+          <select id="visitReason" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 bg-white">
+            <option>General Checkup</option>
+            <option>Consultation</option>
+            <option>Follow-up</option>
+            <option>Vaccination</option>
+            <option>Lab Test</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Notes (optional)</label>
+          <textarea id="visitNotes" rows="3" placeholder="Describe your symptoms or any additional info..." class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 resize-none"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between sticky bottom-0">
+      <button id="prevStep" class="px-5 py-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-white text-sm font-medium hidden">
+        <i class="fa-solid fa-arrow-left mr-1"></i> Back
+      </button>
+      <div class="ml-auto flex gap-2">
+        <button id="cancelBooking" class="px-5 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm font-medium">Cancel</button>
+        <button id="nextStepBtn" class="px-5 py-2 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium shadow-sm">
+          Next <i class="fa-solid fa-arrow-right ml-1"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed top-6 right-6 z-[60] hidden bg-white border border-slate-200 rounded-xl shadow-2xl px-4 py-3 flex items-center gap-3 slide-in">
+  <div id="toastIcon" class="w-9 h-9 rounded-lg bg-green-100 text-green-600 flex items-center justify-center"><i class="fa-solid fa-check"></i></div>
+  <div>
+    <p id="toastTitle" class="font-semibold text-sm text-slate-800">Success</p>
+    <p id="toastMsg" class="text-xs text-slate-500">Operation completed</p>
+  </div>
+</div>
+
+<script>
+// ============ AUTH STATE ============
+let auth = {
+  loggedIn: false,
+  user: null
+};
+
+// ============ DATA ============
+const doctors = [
+  { id: 1, name: 'Dr. Maria Santos', specialty: 'Cardiologist', avatar: 'MS', color: 'from-rose-400 to-pink-500', rating: 4.9, exp: 12, fee: 350 },
+  { id: 2, name: 'Dr. Juan Dela Cruz', specialty: 'General Physician', avatar: 'JC', color: 'from-sky-400 to-blue-500', rating: 4.8, exp: 8, fee: 300 },
+  { id: 3, name: 'Dr. Ana Reyes', specialty: 'Pediatrician', avatar: 'AR', color: 'from-amber-400 to-orange-500', rating: 4.9, exp: 10, fee: 320 },
+  { id: 4, name: 'Dr. Carlos Garcia', specialty: 'Dermatologist', avatar: 'CG', color: 'from-violet-400 to-purple-500', rating: 4.7, exp: 15, fee: 380 },
+  { id: 5, name: 'Dr. Luisa Mendoza', specialty: 'Orthopedic', avatar: 'LM', color: 'from-emerald-400 to-teal-500', rating: 4.8, exp: 9, fee: 360 },
+  { id: 6, name: 'Dr. Roberto Aquino', specialty: 'Neurologist', avatar: 'RA', color: 'from-indigo-400 to-blue-600', rating: 4.9, exp: 14, fee: 400 }
+];
+
+const timeSlots = ['09:00','09:30','10:00','10:30','11:00','11:30','14:00','14:30','15:00','15:30','16:00','16:30'];
+
+const today = new Date();
+const fmt = (d) => d.toISOString().split('T')[0];
+const addDays = (d, n) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
+
+let appointments = [
+  { id: 1, patient: 'Juan Dela Cruz', phone: '+63 917 123 4567', email: 'juan@mail.com', address: 'Unit 4B, Sunrise Residences, Brgy. Poblacion, Makati City, Metro Manila', doctorId: 1, date: fmt(today), time: '09:30', reason: 'Consultation', notes: 'Chest pain during exercise', status: 'confirmed' },
+  { id: 2, patient: 'Emma Villanueva', phone: '+63 918 234 5678', email: 'emma@mail.com', address: '123 Mabini St., Brgy. San Antonio, Quezon City, Metro Manila', doctorId: 2, date: fmt(today), time: '10:00', reason: 'General Checkup', notes: '', status: 'confirmed' },
+  { id: 3, patient: 'Miguel Bautista', phone: '+63 919 345 6789', email: 'miguel@mail.com', address: '45 Rizal Ave., Brgy. Bagong Silang, Caloocan City, Metro Manila', doctorId: 3, date: fmt(today), time: '11:00', reason: 'Vaccination', notes: 'Annual flu shot', status: 'pending' },
+  { id: 4, patient: 'Sofia Castillo', phone: '+63 920 456 7890', email: 'sofia@mail.com', address: '78 Bonifacio St., Brgy. Kapitolyo, Pasig City, Metro Manila', doctorId: 4, date: fmt(addDays(today,1)), time: '14:00', reason: 'Consultation', notes: 'Skin rash on arms', status: 'confirmed' },
+  { id: 5, patient: 'Daniel Torres', phone: '+63 921 567 8901', email: 'daniel@mail.com', address: '22 Aguinaldo Hwy., Brgy. Salawag, Dasmariñas, Cavite', doctorId: 5, date: fmt(addDays(today,1)), time: '15:30', reason: 'Follow-up', notes: 'Post-surgery check', status: 'confirmed' },
+  { id: 6, patient: 'Olivia Fernandez', phone: '+63 922 678 9012', email: 'olivia@mail.com', address: '9 Taft Ave., Brgy. Malate, Manila, Metro Manila', doctorId: 1, date: fmt(addDays(today,-2)), time: '10:30', reason: 'Follow-up', notes: '', status: 'completed' },
+  { id: 7, patient: 'Liam Ramirez', phone: '+63 923 789 0123', email: 'liam@mail.com', address: '15 EDSA, Brgy. Wack-Wack, Mandaluyong City, Metro Manila', doctorId: 6, date: fmt(addDays(today,-1)), time: '16:00', reason: 'Consultation', notes: 'Migraine episodes', status: 'completed' },
+  { id: 8, patient: 'Ava Navarro', phone: '+63 924 890 1234', email: 'ava@mail.com', address: '88 Ortigas Ave., Brgy. Ugong, Pasig City, Metro Manila', doctorId: 2, date: fmt(addDays(today,2)), time: '09:00', reason: 'Lab Test', notes: 'Blood work', status: 'pending' },
+  { id: 9, patient: 'Noah Cruz', phone: '+63 925 901 2345', email: 'noah@mail.com', address: '34 Maginhawa St., Brgy. Teacher’s Village, Quezon City, Metro Manila', doctorId: 3, date: fmt(addDays(today,3)), time: '11:30', reason: 'General Checkup', notes: '', status: 'confirmed' }
+];
+
+let feedbacks = [
+  { id: 1, patient: 'Emma Villanueva', doctorId: 1, rating: 5, message: 'Dr. Santos was very thorough and kind. She explained everything clearly and made me feel at ease. Highly recommended!', date: fmt(addDays(today,-5)) },
+  { id: 2, patient: 'Miguel Bautista', doctorId: 2, rating: 4, message: 'Good experience overall. The clinic was clean and the staff were friendly. Wait time was a bit long though.', date: fmt(addDays(today,-3)) },
+  { id: 3, patient: 'Sofia Castillo', doctorId: 4, rating: 5, message: 'Dr. Garcia is amazing! Very professional and the treatment worked perfectly. Thank you so much!', date: fmt(addDays(today,-2)) },
+  { id: 4, patient: 'Olivia Fernandez', doctorId: 3, rating: 5, message: 'My child loved Dr. Reyes. She was so patient and gentle. The best pediatrician we have visited!', date: fmt(addDays(today,-1)) }
+];
+
+// ============ STATE ============
+let state = {
+  role: 'patient',
+  view: 'dashboard',
+  currentMonth: new Date(today.getFullYear(), today.getMonth(), 1),
+  selectedDoctor: null,
+  selectedDate: null,
+  selectedTime: null,
+  bookingStep: 1,
+  filter: { status: 'all', doctor: 'all', search: '' }
+};
+
+// ============ NAV ============
+const patientNav = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
+  { id: 'my-appointments', label: 'My Appointments', icon: 'fa-calendar-check' },
+  { id: 'doctors', label: 'Our Doctors', icon: 'fa-user-doctor' },
+  { id: 'history', label: 'History', icon: 'fa-clock-rotate-left' },
+  { id: 'feedback', label: 'Give Feedback', icon: 'fa-comment-dots' }
+];
+const staffNav = [
+  { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
+  { id: 'schedule', label: 'Schedule', icon: 'fa-calendar-days' },
+  { id: 'all-appointments', label: 'All Appointments', icon: 'fa-list-check' },
+  { id: 'doctors', label: 'Doctors', icon: 'fa-user-doctor' },
+  { id: 'patients', label: 'Patients', icon: 'fa-users' },
+  { id: 'feedback', label: 'View Feedback', icon: 'fa-comments' }
+];
+
+function renderNav() {
+  const nav = state.role === 'patient' ? patientNav : staffNav;
+  document.getElementById('navLabel').textContent = state.role === 'patient' ? 'Patient Menu' : 'Staff Menu';
+  document.getElementById('navMenu').innerHTML = nav.map(n => `
+    <li>
+      <button data-view="${n.id}" class="nav-item w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 border-l-2 border-transparent transition ${state.view === n.id ? 'active' : ''}">
+        <i class="fa-solid ${n.icon} w-4 text-center"></i>
+        <span>${n.label}</span>
+      </button>
+    </li>
+  `).join('');
+  document.querySelectorAll('.nav-item').forEach(b => b.addEventListener('click', () => {
+    state.view = b.dataset.view;
+    renderNav();
+    renderPage();
+  }));
+}
+
+// ============ HELPERS ============
+const getDoctor = (id) => doctors.find(d => d.id === id);
+const formatTime = (t) => {
+  const [h,m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'PM' : 'AM';
+  const hh = h % 12 || 12;
+  return `${hh}:${String(m).padStart(2,'0')} ${ap}`;
+};
+const formatDate = (d) => {
+  const dt = new Date(d);
+  return dt.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+};
+const formatPeso = (n) => '₱' + n.toLocaleString('en-PH');
+const statusBadge = (s) => `<span class="status-${s} px-2.5 py-1 rounded-full text-xs font-medium capitalize">${s}</span>`;
+const renderStars = (rating, size='text-sm') => {
+  let html = '';
+  for (let i=1; i<=5; i++) {
+    if (i <= Math.floor(rating)) html += `<i class="fa-solid fa-star text-amber-400 ${size}"></i>`;
+    else if (i - rating < 1 && i - rating > 0) html += `<i class="fa-solid fa-star-half-stroke text-amber-400 ${size}"></i>`;
+    else html += `<i class="fa-regular fa-star text-slate-300 ${size}"></i>`;
+  }
+  return html;
+};
+const shortAddress = (addr) => {
+  if (!addr) return '—';
+  const parts = addr.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length <= 2) return addr;
+  return parts.slice(0, 2).join(', ') + ', ' + parts[parts.length - 1];
+};
+
+function showToast(title, msg, type='success') {
+  const t = document.getElementById('toast');
+  const icon = document.getElementById('toastIcon');
+  document.getElementById('toastTitle').textContent = title;
+  document.getElementById('toastMsg').textContent = msg;
+  const colors = { success: ['bg-green-100','text-green-600','fa-check'], error: ['bg-red-100','text-red-600','fa-xmark'], info: ['bg-sky-100','text-sky-600','fa-info'] };
+  const c = colors[type];
+  icon.className = `w-9 h-9 rounded-lg ${c[0]} ${c[1]} flex items-center justify-center`;
+  icon.innerHTML = `<i class="fa-solid ${c[2]}"></i>`;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3000);
+}
+
+// ============ AUTH FUNCTIONS ============
+function getInitials(name) {
+  return name.split(' ').filter(Boolean).map(n => n[0]).slice(0,2).join('').toUpperCase();
+}
+
+function showAuthScreen() {
+  document.getElementById('authScreen').classList.remove('hidden');
+  document.getElementById('mainApp').classList.add('hidden');
+}
+
+function hideAuthScreen() {
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('mainApp').classList.remove('hidden');
+}
+
+function loginUser(user) {
+  auth.loggedIn = true;
+  auth.user = user;
+  state.role = user.role;
+  state.view = 'dashboard';
+
+  const initials = getInitials(user.name);
+  document.getElementById('userAvatar').textContent = initials;
+  document.getElementById('userName').textContent = user.name;
+  document.getElementById('userRole').textContent = user.role === 'patient' ? 'Patient' : 'Staff Administrator';
+
+  if (user.role === 'patient') {
+    document.getElementById('userAvatar').className = 'w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center text-white font-semibold';
+    document.getElementById('rolePatient').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-sky-600';
+    document.getElementById('roleStaff').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500';
+  } else {
+    document.getElementById('userAvatar').className = 'w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-semibold';
+    document.getElementById('roleStaff').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-sky-600';
+    document.getElementById('rolePatient').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500';
+  }
+
+  hideAuthScreen();
+  renderNav();
+  renderPage();
+  showToast('Welcome!', `Signed in as ${user.name}`, 'success');
+}
+
+function signOut() {
+  if (!confirm('Are you sure you want to sign out?')) return;
+  auth.loggedIn = false;
+  auth.user = null;
+  document.getElementById('signInEmail').value = '';
+  document.getElementById('signInPassword').value = '';
+  document.getElementById('signUpFirst').value = '';
+  document.getElementById('signUpLast').value = '';
+  document.getElementById('signUpEmail').value = '';
+  document.getElementById('signUpPhone').value = '';
+  document.getElementById('signUpAddress').value = '';
+  document.getElementById('signUpPassword').value = '';
+  showAuthScreen();
+}
+
+// ============ PAGES ============
+function renderPage() {
+  const c = document.getElementById('pageContainer');
+  c.classList.remove('fade-in'); void c.offsetWidth; c.classList.add('fade-in');
+  const titles = {
+    'dashboard': ['Dashboard', state.role === 'patient' ? `Welcome back, ${auth.user?.name?.split(' ')[0] || 'there'}!` : 'Manage your clinic operations'],
+    'my-appointments': ['My Appointments', 'View and manage your upcoming visits'],
+    'schedule': ['Schedule', 'Weekly view of all appointments'],
+    'all-appointments': ['All Appointments', 'Complete list of clinic appointments'],
+    'doctors': ['Our Doctors', 'Meet our team of specialists'],
+    'history': ['History', 'Your past appointments'],
+    'patients': ['Patients', 'Registered patients directory'],
+    'feedback': [state.role === 'patient' ? 'Give Feedback' : 'Patient Feedback', state.role === 'patient' ? 'Share your experience with us' : 'Reviews and ratings from patients']
+  };
+  const [t, s] = titles[state.view] || ['',''];
+  document.getElementById('pageTitle').textContent = t;
+  document.getElementById('pageSubtitle').textContent = s;
+
+  switch(state.view) {
+    case 'dashboard': renderDashboard(); break;
+    case 'my-appointments': renderMyAppointments(); break;
+    case 'schedule': renderSchedule(); break;
+    case 'all-appointments': renderAllAppointments(); break;
+    case 'doctors': renderDoctors(); break;
+    case 'history': renderHistory(); break;
+    case 'patients': renderPatients(); break;
+    case 'feedback': renderFeedback(); break;
+  }
+}
+
+function renderDashboard() {
+  const c = document.getElementById('pageContainer');
+  const todayStr = fmt(today);
+  const todayAppts = appointments.filter(a => a.date === todayStr);
+  const upcoming = appointments.filter(a => a.date >= todayStr && a.status !== 'cancelled' && a.status !== 'completed');
+  const completed = appointments.filter(a => a.status === 'completed').length;
+  const pending = appointments.filter(a => a.status === 'pending').length;
+
+  const patientName = auth.user?.name || 'Juan Dela Cruz';
+  const myAppts = state.role === 'patient' ? appointments.filter(a => a.patient === patientName && a.status !== 'cancelled') : [];
+  const nextAppt = myAppts.filter(a => a.date >= todayStr && a.status !== 'completed').sort((a,b)=>a.date.localeCompare(b.date))[0];
+
+  if (state.role === 'patient') {
+    c.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="gradient-card rounded-2xl p-5 text-white shadow-lg shadow-sky-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-calendar-check"></i></div>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Upcoming</span>
+          </div>
+          <p class="text-3xl font-bold">${upcoming.length}</p>
+          <p class="text-sm opacity-90">Scheduled visits</p>
+        </div>
+        <div class="gradient-card-2 rounded-2xl p-5 text-white shadow-lg shadow-teal-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-check-circle"></i></div>
+            <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Done</span>
+          </div>
+          <p class="text-3xl font-bold">${completed}</p>
+          <p class="text-sm opacity-90">Completed visits</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-clock"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-slate-800">${pending}</p>
+          <p class="text-sm text-slate-500">Pending confirmation</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-violet-100 text-violet-600 flex items-center justify-center"><i class="fa-solid fa-user-doctor"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-slate-800">${doctors.length}</p>
+          <p class="text-sm text-slate-500">Specialists available</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-800">Next Appointment</h3>
+              <p class="text-sm text-slate-500">Your upcoming visit details</p>
+            </div>
+            <button onclick="openBooking()" class="text-sm text-sky-600 hover:text-sky-700 font-medium">Book new <i class="fa-solid fa-arrow-right ml-1"></i></button>
+          </div>
+          ${nextAppt ? `
+            <div class="bg-gradient-to-br from-sky-50 to-teal-50 rounded-xl p-5 border border-sky-100">
+              <div class="flex items-start gap-4">
+                <div class="w-14 h-14 rounded-xl bg-gradient-to-br ${getDoctor(nextAppt.doctorId).color} flex items-center justify-center text-white font-bold shadow-md">${getDoctor(nextAppt.doctorId).avatar}</div>
+                <div class="flex-1">
+                  <h4 class="font-bold text-slate-800">${getDoctor(nextAppt.doctorId).name}</h4>
+                  <p class="text-sm text-slate-600">${getDoctor(nextAppt.doctorId).specialty}</p>
+                  <div class="flex items-center gap-4 mt-3 text-sm flex-wrap">
+                    <span class="flex items-center gap-1.5 text-slate-600"><i class="fa-regular fa-calendar text-sky-500"></i> ${formatDate(nextAppt.date)}</span>
+                    <span class="flex items-center gap-1.5 text-slate-600"><i class="fa-regular fa-clock text-sky-500"></i> ${formatTime(nextAppt.time)}</span>
+                    ${statusBadge(nextAppt.status)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ` : `<div class="text-center py-10 text-slate-400"><i class="fa-regular fa-calendar-xmark text-4xl mb-2"></i><p>No upcoming appointments</p></div>`}
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6">
+          <h3 class="font-bold text-slate-800 mb-1">Today's Schedule</h3>
+          <p class="text-sm text-slate-500 mb-4">${todayAppts.length} appointments</p>
+          <div class="space-y-2 max-h-80 overflow-y-auto scrollbar-thin">
+            ${todayAppts.length ? todayAppts.sort((a,b)=>a.time.localeCompare(b.time)).map(a => `
+              <div class="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 border border-slate-100">
+                <div class="text-center min-w-[50px]">
+                  <p class="text-xs text-slate-500">${formatTime(a.time).split(' ')[1]}</p>
+                  <p class="font-bold text-slate-800">${formatTime(a.time).split(' ')[0]}</p>
+                </div>
+                <div class="w-px h-10 bg-slate-200"></div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-medium text-slate-800 truncate">${a.patient}</p>
+                  <p class="text-xs text-slate-500 truncate">${getDoctor(a.doctorId).name}</p>
+                </div>
+                ${statusBadge(a.status)}
+              </div>
+            `).join('') : '<p class="text-sm text-slate-400 text-center py-6">No appointments today</p>'}
+          </div>
+        </div>
+      </div>
+    `;
+  } else {
+    const byDoctor = {};
+    doctors.forEach(d => byDoctor[d.id] = appointments.filter(a => a.doctorId === d.id && a.date >= todayStr && a.status !== 'cancelled').length);
+    const busiest = Object.entries(byDoctor).sort((a,b)=>b[1]-a[1])[0];
+
+    c.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="gradient-card rounded-2xl p-5 text-white shadow-lg shadow-sky-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-calendar-day"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${todayAppts.length}</p>
+          <p class="text-sm opacity-90">Today's appointments</p>
+        </div>
+        <div class="gradient-card-2 rounded-2xl p-5 text-white shadow-lg shadow-teal-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-calendar-week"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${upcoming.length}</p>
+          <p class="text-sm opacity-90">Upcoming total</p>
+        </div>
+        <div class="gradient-card-3 rounded-2xl p-5 text-white shadow-lg shadow-violet-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-hourglass-half"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${pending}</p>
+          <p class="text-sm opacity-90">Awaiting confirmation</p>
+        </div>
+        <div class="gradient-card-4 rounded-2xl p-5 text-white shadow-lg shadow-amber-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-chart-line"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${completed}</p>
+          <p class="text-sm opacity-90">Completed this month</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h3 class="font-bold text-slate-800">Today's Appointments</h3>
+              <p class="text-sm text-slate-500">${today.toLocaleDateString('en-US',{weekday:'long', month:'long', day:'numeric'})}</p>
+            </div>
+          </div>
+          <div class="space-y-2 max-h-96 overflow-y-auto scrollbar-thin">
+            ${todayAppts.length ? todayAppts.sort((a,b)=>a.time.localeCompare(b.time)).map(a => `
+              <div class="flex items-center gap-4 p-3 rounded-lg hover:bg-slate-50 border border-slate-100">
+                <div class="text-center min-w-[60px] border-r border-slate-100 pr-3">
+                  <p class="text-xs text-slate-500">${formatTime(a.time).split(' ')[1]}</p>
+                  <p class="font-bold text-slate-800">${formatTime(a.time).split(' ')[0]}</p>
+                </div>
+                <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${getDoctor(a.doctorId).color} flex items-center justify-center text-white text-xs font-bold">${getDoctor(a.doctorId).avatar}</div>
+                <div class="flex-1 min-w-0">
+                  <p class="text-sm font-semibold text-slate-800">${a.patient}</p>
+                  <p class="text-xs text-slate-500 truncate">${getDoctor(a.doctorId).name} • ${a.reason}</p>
+                </div>
+                ${statusBadge(a.status)}
+                ${a.status === 'confirmed' ? `<button onclick="markComplete(${a.id})" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium"><i class="fa-solid fa-check mr-1"></i>Complete</button>` : ''}
+              </div>
+            `).join('') : '<p class="text-sm text-slate-400 text-center py-10">No appointments scheduled for today</p>'}
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6">
+          <h3 class="font-bold text-slate-800 mb-1">Doctor Workload</h3>
+          <p class="text-sm text-slate-500 mb-4">Upcoming appointments per doctor</p>
+          <div class="space-y-3">
+            ${doctors.slice(0,5).map(d => {
+              const count = byDoctor[d.id] || 0;
+              const pct = Math.min(100, (count/10)*100);
+              return `
+                <div>
+                  <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center gap-2">
+                      <div class="w-7 h-7 rounded-md bg-gradient-to-br ${d.color} flex items-center justify-center text-white text-xs font-bold">${d.avatar}</div>
+                      <span class="text-sm text-slate-700">${d.name.replace('Dr. ','')}</span>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-600">${count}</span>
+                  </div>
+                  <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r ${d.color}" style="width:${pct}%"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')}
+          </div>
+          <div class="mt-5 p-4 rounded-xl bg-gradient-to-br from-sky-50 to-teal-50 border border-sky-100">
+            <p class="text-xs text-slate-600 mb-1">Busiest doctor</p>
+            <p class="font-bold text-slate-800">${getDoctor(busiest[0]).name}</p>
+            <p class="text-xs text-slate-500">${busiest[1]} upcoming appointments</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+function renderMyAppointments() {
+  const c = document.getElementById('pageContainer');
+  const todayStr = fmt(today);
+  const patientName = auth.user?.name || 'Juan Dela Cruz';
+  const my = appointments.filter(a => a.patient === patientName && a.status !== 'cancelled').sort((a,b)=> (a.date+a.time).localeCompare(b.date+b.time));
+  const upcoming = my.filter(a => a.date >= todayStr && a.status !== 'completed');
+  const past = my.filter(a => a.date < todayStr || a.status === 'completed');
+
+  c.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fa-solid fa-calendar-check"></i></div>
+          <div>
+            <p class="text-2xl font-bold text-slate-800">${upcoming.length}</p>
+            <p class="text-sm text-slate-500">Upcoming</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></div>
+          <div>
+            <p class="text-2xl font-bold text-slate-800">${past.length}</p>
+            <p class="text-sm text-slate-500">Completed</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-5">
+        <div class="flex items-center gap-3">
+          <div class="w-11 h-11 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-hourglass-half"></i></div>
+          <div>
+            <p class="text-2xl font-bold text-slate-800">${my.filter(a=>a.status==='pending').length}</p>
+            <p class="text-sm text-slate-500">Pending</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="font-bold text-slate-800">Upcoming Appointments</h3>
+        <button onclick="openBooking()" class="text-sm text-sky-600 hover:text-sky-700 font-medium"><i class="fa-solid fa-plus mr-1"></i>Book new</button>
+      </div>
+      ${upcoming.length ? `
+        <div class="divide-y divide-slate-100">
+          ${upcoming.map(a => `
+            <div class="p-5 appt-row flex items-center gap-4 transition">
+              <div class="w-14 h-14 rounded-xl bg-gradient-to-br ${getDoctor(a.doctorId).color} flex items-center justify-center text-white font-bold shadow-sm">${getDoctor(a.doctorId).avatar}</div>
+              <div class="flex-1 min-w-0">
+                <h4 class="font-semibold text-slate-800">${getDoctor(a.doctorId).name}</h4>
+                <p class="text-sm text-slate-500">${getDoctor(a.doctorId).specialty} • ${a.reason}</p>
+                <div class="flex items-center gap-4 mt-1.5 text-xs text-slate-600 flex-wrap">
+                  <span><i class="fa-regular fa-calendar mr-1"></i>${formatDate(a.date)}</span>
+                  <span><i class="fa-regular fa-clock mr-1"></i>${formatTime(a.time)}</span>
+                  ${a.address ? `<span class="text-slate-400"><i class="fa-solid fa-location-dot mr-1"></i>${shortAddress(a.address)}</span>` : ''}
+                </div>
+              </div>
+              ${statusBadge(a.status)}
+              <button onclick="cancelAppt(${a.id})" class="text-xs px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-red-50 hover:text-red-600 hover:border-red-200 font-medium transition">
+                <i class="fa-solid fa-xmark mr-1"></i>Cancel
+              </button>
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="text-center py-16 text-slate-400"><i class="fa-regular fa-calendar-xmark text-4xl mb-3 block"></i><p class="font-medium">No upcoming appointments</p><p class="text-xs mt-1">Book a new appointment to get started</p></div>`}
+    </div>
+  `;
+}
+
+function renderSchedule() {
+  const c = document.getElementById('pageContainer');
+  const days = [];
+  for (let i=0; i<7; i++) days.push(addDays(today, i));
+
+  c.innerHTML = `
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-slate-800">Weekly Schedule</h3>
+          <p class="text-sm text-slate-500">${formatDate(days[0])} — ${formatDate(days[6])}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="flex items-center gap-1.5 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Confirmed</span>
+          <span class="flex items-center gap-1.5 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Pending</span>
+          <span class="flex items-center gap-1.5 text-xs text-slate-600"><span class="w-2 h-2 rounded-full bg-sky-500"></span>Completed</span>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <div class="grid grid-cols-7 min-w-[900px]">
+          ${days.map((d, i) => {
+            const dayStr = fmt(d);
+            const isToday = dayStr === fmt(today);
+            const dayAppts = appointments.filter(a => a.date === dayStr && a.status !== 'cancelled').sort((a,b)=>a.time.localeCompare(b.time));
+            return `
+              <div class="border-r border-slate-100 last:border-r-0">
+                <div class="p-3 border-b border-slate-100 text-center ${isToday ? 'bg-sky-50' : ''}">
+                  <p class="text-xs text-slate-500 uppercase">${d.toLocaleDateString('en-US',{weekday:'short'})}</p>
+                  <p class="text-lg font-bold ${isToday ? 'text-sky-600' : 'text-slate-800'}">${d.getDate()}</p>
+                  <p class="text-xs text-slate-400">${dayAppts.length} appts</p>
+                </div>
+                <div class="p-2 space-y-1.5 min-h-[400px]">
+                  ${dayAppts.map(a => {
+                    const colors = { confirmed: 'bg-emerald-50 border-emerald-200 text-emerald-700', pending: 'bg-amber-50 border-amber-200 text-amber-700', completed: 'bg-sky-50 border-sky-200 text-sky-700' };
+                    return `
+                      <div class="p-2 rounded-lg border ${colors[a.status]} text-xs" title="${a.address || ''}">
+                        <p class="font-semibold truncate">${formatTime(a.time)}</p>
+                        <p class="truncate">${a.patient}</p>
+                        <p class="truncate opacity-75 text-[10px]">${getDoctor(a.doctorId).name.replace('Dr. ','')}</p>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAllAppointments() {
+  const c = document.getElementById('pageContainer');
+  let list = [...appointments];
+  if (state.filter.status !== 'all') list = list.filter(a => a.status === state.filter.status);
+  if (state.filter.doctor !== 'all') list = list.filter(a => a.doctorId === parseInt(state.filter.doctor));
+  if (state.filter.search) {
+    const q = state.filter.search.toLowerCase();
+    list = list.filter(a => a.patient.toLowerCase().includes(q) || getDoctor(a.doctorId).name.toLowerCase().includes(q) || (a.address && a.address.toLowerCase().includes(q)));
+  }
+  list.sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
+
+  c.innerHTML = `
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-slate-600">Status:</label>
+          <select id="filterStatus" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-sky-400">
+            <option value="all">All</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-sm text-slate-600">Doctor:</label>
+          <select id="filterDoctor" class="px-3 py-1.5 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-sky-400">
+            <option value="all">All Doctors</option>
+            ${doctors.map(d => `<option value="${d.id}">${d.name}</option>`).join('')}
+          </select>
+        </div>
+        <div class="ml-auto text-sm text-slate-500">${list.length} results</div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="text-left px-5 py-3 font-semibold">Patient</th>
+              <th class="text-left px-5 py-3 font-semibold">Address</th>
+              <th class="text-left px-5 py-3 font-semibold">Doctor</th>
+              <th class="text-left px-5 py-3 font-semibold">Date & Time</th>
+              <th class="text-left px-5 py-3 font-semibold">Reason</th>
+              <th class="text-left px-5 py-3 font-semibold">Status</th>
+              <th class="text-right px-5 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${list.length ? list.map(a => `
+              <tr class="appt-row transition">
+                <td class="px-5 py-4">
+                  <p class="font-medium text-slate-800">${a.patient}</p>
+                  <p class="text-xs text-slate-500">${a.phone}</p>
+                </td>
+                <td class="px-5 py-4 max-w-[220px]">
+                  <div class="flex items-start gap-1.5 text-xs text-slate-600" title="${a.address || ''}">
+                    <i class="fa-solid fa-location-dot text-slate-400 mt-0.5 flex-shrink-0"></i>
+                    <span class="line-clamp-2">${a.address || '—'}</span>
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-md bg-gradient-to-br ${getDoctor(a.doctorId).color} flex items-center justify-center text-white text-xs font-bold">${getDoctor(a.doctorId).avatar}</div>
+                    <div>
+                      <p class="text-sm font-medium text-slate-800">${getDoctor(a.doctorId).name.replace('Dr. ','')}</p>
+                      <p class="text-xs text-slate-500">${getDoctor(a.doctorId).specialty}</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  <p class="text-sm text-slate-800">${formatDate(a.date)}</p>
+                  <p class="text-xs text-slate-500">${formatTime(a.time)}</p>
+                </td>
+                <td class="px-5 py-4 text-sm text-slate-600">${a.reason}</td>
+                <td class="px-5 py-4">${statusBadge(a.status)}</td>
+                <td class="px-5 py-4 text-right">
+                  ${a.status === 'confirmed' ? `<button onclick="markComplete(${a.id})" class="text-xs px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-medium mr-1"><i class="fa-solid fa-check"></i></button>` : ''}
+                  ${a.status !== 'cancelled' && a.status !== 'completed' ? `<button onclick="cancelAppt(${a.id})" class="text-xs px-3 py-1.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 font-medium"><i class="fa-solid fa-xmark"></i></button>` : ''}
+                </td>
+              </tr>
+            `).join('') : `<tr><td colspan="7" class="text-center py-12 text-slate-400 text-sm">No appointments match your filters</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('filterStatus').value = state.filter.status;
+  document.getElementById('filterDoctor').value = state.filter.doctor;
+  document.getElementById('filterStatus').addEventListener('change', e => { state.filter.status = e.target.value; renderAllAppointments(); });
+  document.getElementById('filterDoctor').addEventListener('change', e => { state.filter.doctor = e.target.value; renderAllAppointments(); });
+}
+
+function renderDoctors() {
+  const c = document.getElementById('pageContainer');
+  c.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      ${doctors.map(d => {
+        const count = appointments.filter(a => a.doctorId === d.id && a.date >= fmt(today) && a.status !== 'cancelled').length;
+        return `
+          <div class="doctor-card bg-white rounded-2xl border border-slate-200 p-6">
+            <div class="flex items-start gap-4 mb-4">
+              <div class="w-16 h-16 rounded-2xl bg-gradient-to-br ${d.color} flex items-center justify-center text-white font-bold text-lg shadow-md">${d.avatar}</div>
+              <div class="flex-1">
+                <h3 class="font-bold text-slate-800">${d.name}</h3>
+                <p class="text-sm text-slate-500">${d.specialty}</p>
+                <div class="flex items-center gap-1 mt-1">
+                  <i class="fa-solid fa-star text-amber-400 text-xs"></i>
+                  <span class="text-sm font-semibold text-slate-700">${d.rating}</span>
+                  <span class="text-xs text-slate-500">• ${d.exp} yrs exp</span>
+                </div>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3 mb-4">
+              <div class="bg-slate-50 rounded-lg p-3 text-center">
+                <p class="text-xs text-slate-500">Fee</p>
+                <p class="font-bold text-slate-800">${formatPeso(d.fee)}</p>
+              </div>
+              <div class="bg-slate-50 rounded-lg p-3 text-center">
+                <p class="text-xs text-slate-500">Available</p>
+                <p class="font-bold text-slate-800">${count} slots</p>
+              </div>
+            </div>
+            <button onclick="openBookingWithDoctor(${d.id})" class="w-full py-2.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium transition shadow-sm shadow-sky-200">
+              <i class="fa-solid fa-calendar-plus mr-1"></i> Book Appointment
+            </button>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function renderHistory() {
+  const c = document.getElementById('pageContainer');
+  const patientName = auth.user?.name || 'Juan Dela Cruz';
+  const past = appointments.filter(a => a.patient === patientName && (a.status === 'completed' || a.date < fmt(today))).sort((a,b)=> (b.date+b.time).localeCompare(a.date+a.time));
+  c.innerHTML = `
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100">
+        <h3 class="font-bold text-slate-800">Past Appointments</h3>
+        <p class="text-sm text-slate-500">${past.length} records</p>
+      </div>
+      ${past.length ? `
+        <div class="divide-y divide-slate-100">
+          ${past.map(a => `
+            <div class="p-5 flex items-center gap-4">
+              <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${getDoctor(a.doctorId).color} flex items-center justify-center text-white font-bold">${getDoctor(a.doctorId).avatar}</div>
+              <div class="flex-1">
+                <h4 class="font-semibold text-slate-800">${getDoctor(a.doctorId).name}</h4>
+                <p class="text-sm text-slate-500">${getDoctor(a.doctorId).specialty} • ${a.reason}</p>
+                <div class="flex items-center gap-3 mt-1 text-xs text-slate-400 flex-wrap">
+                  <span><i class="fa-regular fa-calendar mr-1"></i>${formatDate(a.date)} at ${formatTime(a.time)}</span>
+                  ${a.address ? `<span><i class="fa-solid fa-location-dot mr-1"></i>${shortAddress(a.address)}</span>` : ''}
+                </div>
+              </div>
+              ${statusBadge(a.status)}
+            </div>
+          `).join('')}
+        </div>
+      ` : `<div class="text-center py-16 text-slate-400"><i class="fa-solid fa-clock-rotate-left text-4xl mb-3 block"></i><p>No past appointments yet</p></div>`}
+    </div>
+  `;
+}
+
+function renderPatients() {
+  const c = document.getElementById('pageContainer');
+  const patientsMap = {};
+  appointments.forEach(a => {
+    if (!patientsMap[a.patient]) patientsMap[a.patient] = { name: a.patient, phone: a.phone, email: a.email, address: a.address || '', count: 0, last: a.date };
+    patientsMap[a.patient].count++;
+    if (a.date > patientsMap[a.patient].last) patientsMap[a.patient].last = a.date;
+    if (a.address && !patientsMap[a.patient].address) patientsMap[a.patient].address = a.address;
+  });
+  const list = Object.values(patientsMap).sort((a,b)=>b.last.localeCompare(a.last));
+
+  c.innerHTML = `
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div>
+          <h3 class="font-bold text-slate-800">Registered Patients</h3>
+          <p class="text-sm text-slate-500">${list.length} patients in the system</p>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead class="bg-slate-50 text-xs uppercase text-slate-500">
+            <tr>
+              <th class="text-left px-5 py-3 font-semibold">Patient</th>
+              <th class="text-left px-5 py-3 font-semibold">Contact</th>
+              <th class="text-left px-5 py-3 font-semibold">Address</th>
+              <th class="text-right px-5 py-3 font-semibold">Visits</th>
+              <th class="text-right px-5 py-3 font-semibold">Last Visit</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            ${list.map(p => `
+              <tr class="appt-row transition">
+                <td class="px-5 py-4">
+                  <div class="flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold flex-shrink-0">${p.name.split(' ').map(n=>n[0]).join('')}</div>
+                    <p class="font-semibold text-slate-800">${p.name}</p>
+                  </div>
+                </td>
+                <td class="px-5 py-4">
+                  <p class="text-xs text-slate-600"><i class="fa-regular fa-envelope mr-1 text-slate-400"></i>${p.email}</p>
+                  <p class="text-xs text-slate-600 mt-0.5"><i class="fa-solid fa-phone mr-1 text-slate-400"></i>${p.phone}</p>
+                </td>
+                <td class="px-5 py-4 max-w-[280px]">
+                  <div class="flex items-start gap-1.5 text-xs text-slate-600" title="${p.address || ''}">
+                    <i class="fa-solid fa-location-dot text-slate-400 mt-0.5 flex-shrink-0"></i>
+                    <span class="line-clamp-2">${p.address || '—'}</span>
+                  </div>
+                </td>
+                <td class="px-5 py-4 text-right">
+                  <p class="text-sm font-semibold text-slate-800">${p.count} visit${p.count>1?'s':''}</p>
+                </td>
+                <td class="px-5 py-4 text-right">
+                  <p class="text-xs text-slate-500">${formatDate(p.last)}</p>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function renderFeedback() {
+  const c = document.getElementById('pageContainer');
+
+  if (state.role === 'patient') {
+    const patientName = auth.user?.name || 'Juan Dela Cruz';
+    const myFeedbacks = feedbacks.filter(f => f.patient === patientName).sort((a,b)=> b.date.localeCompare(a.date));
+    const avgRating = feedbacks.length ? (feedbacks.reduce((s,f)=>s+f.rating,0)/feedbacks.length).toFixed(1) : '0.0';
+
+    c.innerHTML = `
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+            <div class="flex items-center gap-3 mb-5">
+              <div class="w-11 h-11 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center"><i class="fa-solid fa-comment-dots"></i></div>
+              <div>
+                <h3 class="font-bold text-slate-800">Share Your Experience</h3>
+                <p class="text-sm text-slate-500">Your feedback helps us improve our services</p>
+              </div>
+            </div>
+
+            <form id="feedbackForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-2">Rate your visit</label>
+                <div id="starRating" class="star-rating flex items-center gap-1 text-3xl text-slate-300">
+                  <i class="fa-regular fa-star star" data-val="1"></i>
+                  <i class="fa-regular fa-star star" data-val="2"></i>
+                  <i class="fa-regular fa-star star" data-val="3"></i>
+                  <i class="fa-regular fa-star star" data-val="4"></i>
+                  <i class="fa-regular fa-star star" data-val="5"></i>
+                </div>
+                <p id="ratingLabel" class="text-xs text-slate-500 mt-1">Select a rating</p>
+                <input type="hidden" id="feedbackRating" value="0"/>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Doctor visited</label>
+                <select id="feedbackDoctor" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 bg-white text-sm">
+                  <option value="">Select a doctor</option>
+                  ${doctors.map(d => `<option value="${d.id}">${d.name} — ${d.specialty}</option>`).join('')}
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Your feedback</label>
+                <textarea id="feedbackMessage" rows="4" placeholder="Tell us about your experience... What went well? What can we improve?" class="w-full px-4 py-2.5 border border-slate-200 rounded-lg focus:outline-none focus:border-sky-400 resize-none text-sm"></textarea>
+              </div>
+
+              <div class="flex gap-2">
+                <button type="submit" class="px-5 py-2.5 rounded-lg bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold shadow-sm shadow-sky-200 transition">
+                  <i class="fa-solid fa-paper-plane mr-1"></i> Submit Feedback
+                </button>
+                <button type="reset" class="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-sm font-medium">
+                  Clear
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+            <div class="p-5 border-b border-slate-100">
+              <h3 class="font-bold text-slate-800">My Feedback History</h3>
+              <p class="text-sm text-slate-500">${myFeedbacks.length} feedback${myFeedbacks.length!==1?'s':''} submitted</p>
+            </div>
+            ${myFeedbacks.length ? `
+              <div class="divide-y divide-slate-100">
+                ${myFeedbacks.map(f => `
+                  <div class="p-5">
+                    <div class="flex items-start gap-3">
+                      <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${getDoctor(f.doctorId).color} flex items-center justify-center text-white font-bold text-xs">${getDoctor(f.doctorId).avatar}</div>
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between mb-1">
+                          <p class="font-semibold text-slate-800 text-sm">${getDoctor(f.doctorId).name}</p>
+                          <p class="text-xs text-slate-400">${formatDate(f.date)}</p>
+                        </div>
+                        <div class="mb-2">${renderStars(f.rating)}</div>
+                        <p class="text-sm text-slate-600">${f.message}</p>
+                      </div>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            ` : `<div class="text-center py-12 text-slate-400"><i class="fa-regular fa-comment text-3xl mb-2 block"></i><p class="text-sm">No feedback yet. Be the first to share!</p></div>`}
+          </div>
+        </div>
+
+        <div>
+          <div class="bg-gradient-to-br from-sky-500 to-sky-700 rounded-2xl p-6 text-white shadow-lg shadow-sky-200 mb-4">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fa-solid fa-award text-xl"></i>
+              <h4 class="font-bold">Clinic Rating</h4>
+            </div>
+            <p class="text-5xl font-bold mb-1">${avgRating}</p>
+            <div class="mb-2">${renderStars(parseFloat(avgRating), 'text-base')}</div>
+            <p class="text-sm opacity-90">Based on ${feedbacks.length} reviews</p>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5">
+            <h4 class="font-bold text-slate-800 mb-3">Recent Reviews</h4>
+            <div class="space-y-3 max-h-96 overflow-y-auto scrollbar-thin">
+              ${feedbacks.slice(-3).reverse().map(f => `
+                <div class="p-3 rounded-lg bg-slate-50 border border-slate-100">
+                  <div class="flex items-center justify-between mb-1">
+                    <p class="text-xs font-semibold text-slate-700">${f.patient.split(' ')[0]}</p>
+                    <div class="text-xs">${renderStars(f.rating, 'text-xs')}</div>
+                  </div>
+                  <p class="text-xs text-slate-600 line-clamp-2">${f.message}</p>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    let selectedRating = 0;
+    const ratingLabels = ['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'];
+    document.querySelectorAll('#starRating .star').forEach(star => {
+      star.addEventListener('click', () => {
+        selectedRating = parseInt(star.dataset.val);
+        document.getElementById('feedbackRating').value = selectedRating;
+        document.getElementById('ratingLabel').textContent = ratingLabels[selectedRating];
+        document.querySelectorAll('#starRating .star').forEach(s => {
+          const val = parseInt(s.dataset.val);
+          if (val <= selectedRating) {
+            s.className = 'fa-solid fa-star star active text-amber-400';
+          } else {
+            s.className = 'fa-regular fa-star star text-slate-300';
+          }
+        });
+      });
+      star.addEventListener('mouseenter', () => {
+        const hoverVal = parseInt(star.dataset.val);
+        document.querySelectorAll('#starRating .star').forEach(s => {
+          const val = parseInt(s.dataset.val);
+          if (val <= hoverVal) s.classList.add('text-amber-400');
+          else s.classList.remove('text-amber-400');
+        });
+      });
+      star.addEventListener('mouseleave', () => {
+        document.querySelectorAll('#starRating .star').forEach(s => {
+          const val = parseInt(s.dataset.val);
+          if (val <= selectedRating) s.classList.add('text-amber-400');
+          else s.classList.remove('text-amber-400');
+        });
+      });
+    });
+
+    document.getElementById('feedbackForm').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const rating = parseInt(document.getElementById('feedbackRating').value);
+      const doctorId = parseInt(document.getElementById('feedbackDoctor').value);
+      const message = document.getElementById('feedbackMessage').value.trim();
+
+      if (!rating) { showToast('Rating required', 'Please select a star rating', 'error'); return; }
+      if (!doctorId) { showToast('Doctor required', 'Please select a doctor', 'error'); return; }
+      if (!message) { showToast('Message required', 'Please write your feedback', 'error'); return; }
+      if (message.length < 10) { showToast('Too short', 'Please write at least 10 characters', 'error'); return; }
+
+      feedbacks.push({
+        id: Date.now(),
+        patient: patientName,
+        doctorId: doctorId,
+        rating: rating,
+        message: message,
+        date: fmt(today)
+      });
+
+      showToast('Thank you!', 'Your feedback has been submitted', 'success');
+      renderFeedback();
+    });
+
+    document.getElementById('feedbackForm').addEventListener('reset', () => {
+      selectedRating = 0;
+      document.getElementById('feedbackRating').value = 0;
+      document.getElementById('ratingLabel').textContent = 'Select a rating';
+      document.querySelectorAll('#starRating .star').forEach(s => {
+        s.className = 'fa-regular fa-star star text-slate-300';
+      });
+    });
+
+  } else {
+    const avgRating = feedbacks.length ? (feedbacks.reduce((s,f)=>s+f.rating,0)/feedbacks.length).toFixed(1) : '0.0';
+    const ratingDist = [5,4,3,2,1].map(r => ({
+      rating: r,
+      count: feedbacks.filter(f => f.rating === r).length,
+      pct: feedbacks.length ? (feedbacks.filter(f => f.rating === r).length / feedbacks.length * 100) : 0
+    }));
+
+    c.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="gradient-card rounded-2xl p-5 text-white shadow-lg shadow-sky-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-star"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${avgRating}</p>
+          <p class="text-sm opacity-90">Average rating</p>
+        </div>
+        <div class="gradient-card-2 rounded-2xl p-5 text-white shadow-lg shadow-teal-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center"><i class="fa-solid fa-comments"></i></div>
+          </div>
+          <p class="text-3xl font-bold">${feedbacks.length}</p>
+          <p class="text-sm opacity-90">Total reviews</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center"><i class="fa-solid fa-face-smile"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-slate-800">${feedbacks.filter(f=>f.rating>=4).length}</p>
+          <p class="text-sm text-slate-500">Positive (4-5★)</p>
+        </div>
+        <div class="bg-white rounded-2xl p-5 border border-slate-200">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-10 h-10 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center"><i class="fa-solid fa-face-meh"></i></div>
+          </div>
+          <p class="text-3xl font-bold text-slate-800">${feedbacks.filter(f=>f.rating<=3).length}</p>
+          <p class="text-sm text-slate-500">Needs attention (≤3★)</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-slate-800">All Patient Feedback</h3>
+              <p class="text-sm text-slate-500">${feedbacks.length} reviews</p>
+            </div>
+          </div>
+          <div class="divide-y divide-slate-100 max-h-[600px] overflow-y-auto scrollbar-thin">
+            ${feedbacks.length ? [...feedbacks].sort((a,b)=>b.date.localeCompare(a.date)).map(f => `
+              <div class="p-5 feedback-card">
+                <div class="flex items-start gap-3">
+                  <div class="w-11 h-11 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white font-semibold text-sm">${f.patient.split(' ').map(n=>n[0]).join('')}</div>
+                  <div class="flex-1">
+                    <div class="flex items-center justify-between mb-1">
+                      <div>
+                        <p class="font-semibold text-slate-800 text-sm">${f.patient}</p>
+                        <p class="text-xs text-slate-500">for ${getDoctor(f.doctorId).name} • ${formatDate(f.date)}</p>
+                      </div>
+                      <div>${renderStars(f.rating)}</div>
+                    </div>
+                    <p class="text-sm text-slate-600 mt-2">${f.message}</p>
+                  </div>
+                </div>
+              </div>
+            `).join('') : `<div class="text-center py-12 text-slate-400"><p class="text-sm">No feedback yet</p></div>`}
+          </div>
+        </div>
+
+        <div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-4">
+            <h4 class="font-bold text-slate-800 mb-4">Rating Distribution</h4>
+            <div class="space-y-2.5">
+              ${ratingDist.map(r => `
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-slate-600 w-8">${r.rating} <i class="fa-solid fa-star text-amber-400"></i></span>
+                  <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-amber-400 to-amber-500" style="width:${r.pct}%"></div>
+                  </div>
+                  <span class="text-xs font-semibold text-slate-600 w-6 text-right">${r.count}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white rounded-2xl border border-slate-200 p-5">
+            <h4 class="font-bold text-slate-800 mb-4">Doctor Ratings</h4>
+            <div class="space-y-3">
+              ${doctors.map(d => {
+                const docFb = feedbacks.filter(f => f.doctorId === d.id);
+                const avg = docFb.length ? (docFb.reduce((s,f)=>s+f.rating,0)/docFb.length).toFixed(1) : '—';
+                return `
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br ${d.color} flex items-center justify-center text-white font-bold text-xs">${d.avatar}</div>
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-slate-800 truncate">${d.name.replace('Dr. ','')}</p>
+                      <div class="flex items-center gap-1">
+                        ${docFb.length ? renderStars(parseFloat(avg), 'text-xs') : '<span class="text-xs text-slate-400">No ratings</span>'}
+                      </div>
+                    </div>
+                    <span class="text-xs font-semibold text-slate-600">${avg}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ============ ACTIONS ============
+function cancelAppt(id) {
+  if (!confirm('Cancel this appointment?')) return;
+  const a = appointments.find(x => x.id === id);
+  if (a) { a.status = 'cancelled'; renderPage(); showToast('Cancelled', 'Appointment has been cancelled', 'info'); }
+}
+function markComplete(id) {
+  const a = appointments.find(x => x.id === id);
+  if (a) { a.status = 'completed'; renderPage(); showToast('Completed', 'Appointment marked as completed', 'success'); }
+}
+
+// ============ BOOKING MODAL ============
+function openBooking() {
+  state.bookingStep = 1;
+  state.selectedDoctor = null;
+  state.selectedDate = null;
+  state.selectedTime = null;
+  const patientName = auth.user?.name || 'Juan Dela Cruz';
+  const patientPhone = auth.user?.phone || '+63 917 123 4567';
+  const patientEmail = auth.user?.email || 'juan@mail.com';
+  const patientAddress = auth.user?.address || 'Unit 4B, Sunrise Residences, Brgy. Poblacion, Makati City, Metro Manila';
+  document.getElementById('patientName').value = patientName;
+  document.getElementById('patientPhone').value = patientPhone;
+  document.getElementById('patientEmail').value = patientEmail;
+  document.getElementById('patientAddress').value = patientAddress;
+  document.getElementById('bookingModal').classList.remove('hidden');
+  document.getElementById('bookingModal').classList.add('flex');
+  renderBookingStep();
+  renderDoctorGrid();
+  renderCalendar();
+}
+function openBookingWithDoctor(id) {
+  openBooking();
+  state.selectedDoctor = id;
+  renderDoctorGrid();
+  setTimeout(() => nextStep(), 300);
+}
+function closeBooking() {
+  document.getElementById('bookingModal').classList.add('hidden');
+  document.getElementById('bookingModal').classList.remove('flex');
+}
+function renderBookingStep() {
+  [1,2,3].forEach(i => {
+    document.getElementById('step'+i).classList.toggle('hidden', i !== state.bookingStep);
+    const ind = document.getElementById('step'+i+'Indicator');
+    if (i < state.bookingStep) { ind.className = 'w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-semibold'; ind.innerHTML = '<i class="fa-solid fa-check"></i>'; }
+    else if (i === state.bookingStep) { ind.className = 'w-8 h-8 rounded-full bg-sky-500 text-white flex items-center justify-center text-sm font-semibold'; ind.textContent = i; }
+    else { ind.className = 'w-8 h-8 rounded-full bg-slate-200 text-slate-500 flex items-center justify-center text-sm font-semibold'; ind.textContent = i; }
+  });
+  document.getElementById('prog1').style.width = state.bookingStep >= 2 ? '100%' : '0%';
+  document.getElementById('prog2').style.width = state.bookingStep >= 3 ? '100%' : '0%';
+  document.getElementById('prevStep').classList.toggle('hidden', state.bookingStep === 1);
+  const nextBtn = document.getElementById('nextStepBtn');
+  nextBtn.innerHTML = state.bookingStep === 3 ? '<i class="fa-solid fa-check mr-1"></i> Confirm Booking' : 'Next <i class="fa-solid fa-arrow-right ml-1"></i>';
+}
+function nextStep() {
+  if (state.bookingStep === 1 && !state.selectedDoctor) { showToast('Select doctor', 'Please choose a doctor first', 'error'); return; }
+  if (state.bookingStep === 2 && (!state.selectedDate || !state.selectedTime)) { showToast('Select time', 'Please choose date and time', 'error'); return; }
+  if (state.bookingStep === 3) {
+    const name = document.getElementById('patientName').value.trim();
+    const phone = document.getElementById('patientPhone').value.trim();
+    const email = document.getElementById('patientEmail').value.trim();
+    const address = document.getElementById('patientAddress').value.trim();
+    if (!name || !phone || !email || !address) { showToast('Missing info', 'Please fill all required fields including address', 'error'); return; }
+    const newAppt = {
+      id: Date.now(),
+      patient: name, phone, email, address,
+      doctorId: state.selectedDoctor,
+      date: state.selectedDate,
+      time: state.selectedTime,
+      reason: document.getElementById('visitReason').value,
+      notes: document.getElementById('visitNotes').value,
+      status: 'pending'
+    };
+    appointments.push(newAppt);
+    // Update user address if patient
+    if (auth.user && auth.user.role === 'patient') {
+      auth.user.address = address;
+    }
+    closeBooking();
+    showToast('Booked!', 'Appointment scheduled successfully', 'success');
+    renderPage();
+    return;
+  }
+  state.bookingStep++;
+  renderBookingStep();
+}
+function prevStep() {
+  if (state.bookingStep > 1) { state.bookingStep--; renderBookingStep(); }
+}
+function renderDoctorGrid() {
+  document.getElementById('doctorGrid').innerHTML = doctors.map(d => `
+    <button data-id="${d.id}" class="doctor-select text-left p-4 rounded-xl border-2 transition ${state.selectedDoctor === d.id ? 'border-sky-500 bg-sky-50' : 'border-slate-200 hover:border-sky-300 hover:bg-slate-50'}">
+      <div class="flex items-center gap-3">
+        <div class="w-12 h-12 rounded-xl bg-gradient-to-br ${d.color} flex items-center justify-center text-white font-bold">${d.avatar}</div>
+        <div class="flex-1">
+          <p class="font-semibold text-slate-800 text-sm">${d.name}</p>
+          <p class="text-xs text-slate-500">${d.specialty}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="text-xs"><i class="fa-solid fa-star text-amber-400"></i> ${d.rating}</span>
+            <span class="text-xs text-slate-400">• ${formatPeso(d.fee)}</span>
+          </div>
+        </div>
+        ${state.selectedDoctor === d.id ? '<i class="fa-solid fa-circle-check text-sky-500 text-xl"></i>' : ''}
+      </div>
+    </button>
+  `).join('');
+  document.querySelectorAll('.doctor-select').forEach(b => b.addEventListener('click', () => {
+    state.selectedDoctor = parseInt(b.dataset.id);
+    renderDoctorGrid();
+  }));
+}
+function renderCalendar() {
+  const y = state.currentMonth.getFullYear();
+  const m = state.currentMonth.getMonth();
+  document.getElementById('monthLabel').textContent = state.currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const firstDay = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m+1, 0).getDate();
+  const todayStr = fmt(today);
+  let html = '';
+  for (let i=0; i<firstDay; i++) html += '<div></div>';
+  for (let d=1; d<=daysInMonth; d++) {
+    const date = new Date(y, m, d);
+    const dateStr = fmt(date);
+    const isPast = date < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const isSunday = date.getDay() === 0;
+    const isToday = dateStr === todayStr;
+    const isSelected = dateStr === state.selectedDate;
+    const disabled = isPast || isSunday;
+    html += `<button data-date="${dateStr}" ${disabled?'disabled':''} class="day-btn aspect-square rounded-lg text-sm font-medium border transition ${isSelected?'active':''} ${isToday && !isSelected?'today':''} ${disabled?'text-slate-300 cursor-not-allowed':'hover:bg-sky-50 hover:border-sky-300 text-slate-700 border-transparent'}">${d}</button>`;
+  }
+  document.getElementById('calendarGrid').innerHTML = html;
+  document.querySelectorAll('.day-btn').forEach(b => b.addEventListener('click', () => {
+    if (b.disabled) return;
+    state.selectedDate = b.dataset.date;
+    state.selectedTime = null;
+    renderCalendar();
+    renderTimeSlots();
+  }));
+  document.getElementById('prevMonth').onclick = () => { state.currentMonth = new Date(y, m-1, 1); renderCalendar(); };
+  document.getElementById('nextMonth').onclick = () => { state.currentMonth = new Date(y, m+1, 1); renderCalendar(); };
+}
+function renderTimeSlots() {
+  if (!state.selectedDate) { document.getElementById('timeSlotsWrap').classList.add('hidden'); return; }
+  document.getElementById('timeSlotsWrap').classList.remove('hidden');
+  const taken = appointments.filter(a => a.doctorId === state.selectedDoctor && a.date === state.selectedDate && a.status !== 'cancelled').map(a => a.time);
+  document.getElementById('timeSlots').innerHTML = timeSlots.map(t => {
+    const isTaken = taken.includes(t);
+    const isSelected = state.selectedTime === t;
+    return `<button data-time="${t}" ${isTaken?'disabled':''} class="slot-btn py-2 rounded-lg border text-sm font-medium transition ${isSelected?'active':'border-slate-200 hover:border-sky-300 hover:bg-sky-50 text-slate-700'}">${formatTime(t)}</button>`;
+  }).join('');
+  document.querySelectorAll('.slot-btn').forEach(b => b.addEventListener('click', () => {
+    if (b.disabled) return;
+    state.selectedTime = b.dataset.time;
+    renderTimeSlots();
+  }));
+}
+
+// ============ AUTH EVENT LISTENERS ============
+document.getElementById('tabSignIn').addEventListener('click', () => {
+  document.getElementById('signInForm').classList.remove('hidden');
+  document.getElementById('signUpForm').classList.add('hidden');
+  document.getElementById('tabSignIn').className = 'auth-tab flex-1 py-4 text-sm font-semibold text-sky-600 border-b-2 border-sky-500 bg-sky-50/50';
+  document.getElementById('tabSignUp').className = 'auth-tab flex-1 py-4 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700';
+});
+document.getElementById('tabSignUp').addEventListener('click', () => {
+  document.getElementById('signUpForm').classList.remove('hidden');
+  document.getElementById('signInForm').classList.add('hidden');
+  document.getElementById('tabSignUp').className = 'auth-tab flex-1 py-4 text-sm font-semibold text-sky-600 border-b-2 border-sky-500 bg-sky-50/50';
+  document.getElementById('tabSignIn').className = 'auth-tab flex-1 py-4 text-sm font-semibold text-slate-500 border-b-2 border-transparent hover:text-slate-700';
+});
+
+document.getElementById('signInForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const email = document.getElementById('signInEmail').value.trim();
+  const password = document.getElementById('signInPassword').value;
+  const role = document.querySelector('input[name="signInRole"]:checked').value;
+  const errEl = document.getElementById('signInError');
+
+  if (!email || !password) {
+    errEl.textContent = 'Please fill in all fields';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password.length < 4) {
+    errEl.textContent = 'Password must be at least 4 characters';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+
+  const namePart = email.split('@')[0].replace(/[._-]/g, ' ');
+  const name = namePart.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const displayName = name || (role === 'patient' ? 'Juan Dela Cruz' : 'Admin Reyes');
+
+  loginUser({
+    name: displayName,
+    email: email,
+    phone: '+63 917 000 0000',
+    address: 'Unit 4B, Sunrise Residences, Brgy. Poblacion, Makati City, Metro Manila',
+    role: role
+  });
+});
+
+document.getElementById('signUpForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const first = document.getElementById('signUpFirst').value.trim();
+  const last = document.getElementById('signUpLast').value.trim();
+  const email = document.getElementById('signUpEmail').value.trim();
+  const phone = document.getElementById('signUpPhone').value.trim();
+  const address = document.getElementById('signUpAddress').value.trim();
+  const password = document.getElementById('signUpPassword').value;
+  const role = document.querySelector('input[name="signUpRole"]:checked').value;
+  const agree = document.getElementById('agreeTerms').checked;
+  const errEl = document.getElementById('signUpError');
+
+  if (!first || !last || !email || !phone || !address || !password) {
+    errEl.textContent = 'Please fill in all required fields including address';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (password.length < 6) {
+    errEl.textContent = 'Password must be at least 6 characters';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  if (!agree) {
+    errEl.textContent = 'Please agree to the Terms of Service';
+    errEl.classList.remove('hidden');
+    return;
+  }
+  errEl.classList.add('hidden');
+
+  const fullName = `${first.charAt(0).toUpperCase()}${first.slice(1)} ${last.charAt(0).toUpperCase()}${last.slice(1)}`;
+
+  loginUser({
+    name: fullName,
+    email: email,
+    phone: phone,
+    address: address,
+    role: role
+  });
+});
+
+// ============ ROLE SWITCH & SIGN OUT ============
+document.getElementById('rolePatient').addEventListener('click', () => {
+  if (auth.user) auth.user.role = 'patient';
+  state.role = 'patient'; state.view = 'dashboard';
+  document.getElementById('rolePatient').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-sky-600';
+  document.getElementById('roleStaff').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500';
+  document.getElementById('userAvatar').className = 'w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-sky-600 flex items-center justify-center text-white font-semibold';
+  document.getElementById('userRole').textContent = 'Patient';
+  renderNav(); renderPage();
+});
+document.getElementById('roleStaff').addEventListener('click', () => {
+  if (auth.user) auth.user.role = 'staff';
+  state.role = 'staff'; state.view = 'dashboard';
+  document.getElementById('roleStaff').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all bg-white shadow-sm text-sky-600';
+  document.getElementById('rolePatient').className = 'role-btn flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all text-slate-500';
+  document.getElementById('userAvatar').className = 'w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-semibold';
+  document.getElementById('userRole').textContent = 'Staff Administrator';
+  renderNav(); renderPage();
+});
+
+document.getElementById('signOutBtn').addEventListener('click', signOut);
+document.getElementById('newApptBtn').addEventListener('click', openBooking);
+document.getElementById('closeModal').addEventListener('click', closeBooking);
+document.getElementById('cancelBooking').addEventListener('click', closeBooking);
+document.getElementById('nextStepBtn').addEventListener('click', nextStep);
+document.getElementById('prevStep').addEventListener('click', prevStep);
+document.getElementById('globalSearch').addEventListener('input', e => {
+  state.filter.search = e.target.value;
+  if (state.view === 'all-appointments') renderAllAppointments();
+});
+
+// ============ INIT ============
+showAuthScreen();
+</script>
+</body>
+</html>
